@@ -1,0 +1,15 @@
+0       string     \x47
+>188    byte       0x47
+>376    byte       0x47      MPEG 2 transport stream
+!:ext   m2ts
+!:mime  video/MP2T
+0       string     \x47
+>192    byte       0x47
+>384    byte       0x47      MPEG 2 transport stream w/ timecode
+!:ext   mts
+!:mime  video/MP2T
+4       string     \x47
+>196    byte       0x47
+>388    byte       0x47      MPEG 2 transport stream AVCHD w/ timecode
+!:ext   mts
+!:mime  video/MP2T

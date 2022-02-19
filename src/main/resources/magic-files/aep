@@ -1,0 +1,4 @@
+0	string		RIFX		RIFF (big-endian) data
+>8	string		Egg!            Adobe After Effects Project Egg
+!:ext   aep
+!:mime  application/vnd.adobe.aftereffects.project
