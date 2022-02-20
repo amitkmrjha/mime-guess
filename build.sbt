@@ -9,5 +9,8 @@ lazy val root = project
     scalaVersion := scala3Version,
 
     libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test",
-    libraryDependencies += "com.j256.simplemagic" % "simplemagic" % "1.17"
+    libraryDependencies += "net.java.dev.jna" % "jna" % "5.10.0",
+    libraryDependencies += "net.java.dev.jna" % "jna-platform" % "5.10.0"
+
+
   )
