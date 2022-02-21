@@ -2,6 +2,7 @@ val scala3Version = "3.1.1"
 
 lazy val root = project
   .in(file("."))
+  .enablePlugins(JavaAppPackaging)
   .settings(
     name := "mime-guess",
     version := "0.1.0-SNAPSHOT",
