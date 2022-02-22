@@ -21,8 +21,8 @@ object GuessMime {
       //lmi.setMagicFileDir(new File(magicFiles.getPath))
     }
     val mimetype = lmi.identify(filToInspect)
-    if(mimetype!=null) s"Content-type is: :  "+mimetype
-    else "Unknown content-type"
+    if(mimetype!=null) s" ${filToInspect.getPath} :  "+mimetype
+    else s" ${filToInspect.getPath} :  "+"Unknown content-type"
   }
 
   def  getMimeInFolder(dirPath: String): Seq[String] = {
@@ -30,8 +30,8 @@ object GuessMime {
     if(dirFile.isDirectory){
       recursiveListFiles(dirFile).map{ file =>
         val mimetype = lmi.identify(file)
-        if(mimetype!=null) s"Content-type is: :  "+mimetype
-        else "Unknown content-type"
+        if(mimetype!=null) s" ${file.getPath} :  "+mimetype
+        else s" ${file.getPath} :  "+"Unknown content-type"
       }
     }else Seq.empty
   }
@@ -65,10 +65,10 @@ object GuessMime {
     if(info == null) println("Unknown content-type")
     else println("Content-type is: " + info.getName())*/
   }
-  
+
   private def recursiveListFiles(f: File): Array[File] = {
     val these = f.listFiles
-    these ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
+    these.filter(!_.isDirectory) ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
   }
 }
 
