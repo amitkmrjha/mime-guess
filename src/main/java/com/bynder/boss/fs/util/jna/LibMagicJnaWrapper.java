@@ -15,6 +15,7 @@ import com.sun.jna.Pointer;
 public class LibMagicJnaWrapper {
 
     public static final int DEFAULT_BUFFER_SIZE = 8192;
+    public final static String DEFAULT_MAGIC_PATH = "/usr/share/file/magic.mgc";
 
     public interface LibmagicDll extends Library {
         //jna.debug_load=true

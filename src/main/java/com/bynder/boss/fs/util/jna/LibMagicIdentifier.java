@@ -2,9 +2,12 @@ package com.bynder.boss.fs.util.jna;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.Buffer;
 
 
 public class LibMagicIdentifier {
+
+
 
     /** Magic database file extension. */
     private final static String MAGIC_DB_EXTENSION = ".mgc";
@@ -49,7 +52,9 @@ public class LibMagicIdentifier {
                     // Nope! Must be in the parent dir. of the source definitions.
                     magicPath = new File(magicFileDir.getParentFile(), dbName);
                 }
-                compiledMagicPath = magicPath.getAbsolutePath();
+                //add both custom and default database file
+                compiledMagicPath = libMagicWrapper.DEFAULT_MAGIC_PATH +":"+ magicPath.getAbsolutePath();
+                System.out.println("compiledMagicPath "+compiledMagicPath);
                 // Keep compiled file ref. for shutdown time cleanup.
                 compiledMagic = magicPath;
                 compiledMagic.deleteOnExit();
@@ -89,6 +94,20 @@ public class LibMagicIdentifier {
         }
         return mimeType;
     }
+
+    public String identify(Buffer buffer) throws IOException, LibMagicException {
+        checkIfInitialized();
+        // Extract MIME type and encoding using libmagic.
+        String mimeType = null;
+
+        if (buffer != null && buffer.hasArray()) {
+            mimeType = libMagicWrapper.getMimeType(buffer,2048);
+        }
+        return mimeType;
+    }
+    
+    
+    
     public void setMagicFileDir(File magicDir) {
         magicFileDir = magicDir;
     }
