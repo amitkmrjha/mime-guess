@@ -4,15 +4,17 @@ package com.bynder.boss.fs.mime
 import akka.actor.typed.ActorSystem
 import akka.stream.scaladsl.{FileIO, Sink}
 
-import java.nio.file.Paths
-import java.nio.file.Files
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import java.io.{ByteArrayInputStream, File, FileInputStream, InputStream}
-import java.net.{URL, URLConnection}
+import java.net.{URL, URLConnection, URLDecoder}
 import com.bynder.boss.fs.util.jna.LibMagicIdentifier
-import akka.util.ByteString
 
+import java.nio.charset.StandardCharsets
+import java.util
+import java.util.jar.{JarEntry, JarFile}
 import scala.collection.AbstractIterator
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
+import scala.jdk.CollectionConverters.*
 
 class  GuessMime(system: ActorSystem[?]) {
   //System.setProperty("jna.debug_load", "true");
@@ -24,7 +26,7 @@ class  GuessMime(system: ActorSystem[?]) {
   case class Chunk(length: Int, bytes: Array[Byte])
 
    def  getMime(filToInspect: File): String = {
-    val magicFiles = getClass.getResource("/magic-files")
+    val magicFiles: URL = getClass.getResource("/magic-files")
     println(s"magicFiles path ${magicFiles}")
     val magicFolder = new File(magicFiles.getPath)
     if (magicFolder.exists && magicFolder.isDirectory){
@@ -39,57 +41,21 @@ class  GuessMime(system: ActorSystem[?]) {
   }
 
   def  getMimeInFolder(dirPath: String): Seq[String] = {
-    val magicFiles = getClass.getResource("/magic-files")
-    println(s"magicFiles path ${magicFiles}")
-    val magicFolder = new File(magicFiles.getPath)
-    if (magicFolder.exists && magicFolder.isDirectory){
-      magicFolder.listFiles().map(f => println(f.getAbsolutePath))
+    //val magicFiles = getClass.getResource("/magic-files")
+    getMagicFileFromJar("magic-files").map(magicFiles =>
       lmi.setMagicFileDir(new File(magicFiles.getPath))
-    }else println("unable to read magicFiles path magicFolder.exists "
-      +magicFolder.exists+" magicFolder.isDirectory "+magicFolder.isDirectory)
+    )
     val dirFile = new File(dirPath)
     if(dirFile.isDirectory){
       recursiveListFiles(dirFile).map{ file =>
         //val mimetype = lmi.identify(file)
         val chunk = getChunk(file)
         val mimetype = lmi.identify(java.nio.ByteBuffer.wrap(chunk))
-        val extraGuess = URLConnection.guessContentTypeFromName(file.getName())
-        if(mimetype!=null) s" ${file.getPath} :  "+mimetype+" "+extraGuess
+        if(mimetype!=null) s" ${file.getPath} :  "+mimetype+" "
         else s" ${file.getPath} :  "+"Unknown content-type"
       }
     }else Seq.empty
   }
-
-  def  getMimeStream(filToInspect: File): Unit = {
-    val lmi = new LibMagicIdentifier()
-    val magicFiles = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("magic-files"))
-    val firstFile =  magicFiles.getLines().mkString
-   println(firstFile)
-    magicFiles.close()
-
-    /*println(s"magicFiles path ${magicFiles}")
-    val magicFolder = new File(magicFiles.getPath)
-    if (magicFolder.exists && magicFolder.isDirectory)
-      lmi.setMagicFileDir(new File(magicFiles.getPath))
-
-    val file = new File("test_docs/test_powerpoint.pptx")
-    println(s"file "+file.getName)
-    val mimetype = lmi.identify(file)
-    if(mimetype!=null) println(s"Content-type is: :  "+mimetype)
-    else println("Unknown content-type")*/
-  }
-
-  def  getMimeByteArray(filToInspect: File): Unit = {
-    /*val chunkUtil = new FileUtilChunk()
-    //val file = new File("test_docs/testmy.png")
-    val file = new File("test_docs/test.au")
-    println(s"file "+file.getName)
-    val info = chunkUtil.contentInfoFromByteArray(file)
-
-    if(info == null) println("Unknown content-type")
-    else println("Content-type is: " + info.getName())*/
-  }
-
   private def recursiveListFiles(f: File): Array[File] = {
     val these = f.listFiles
     these.filter(f => !f.isDirectory && f.length()>0 ) ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
@@ -123,6 +89,31 @@ class  GuessMime(system: ActorSystem[?]) {
     }
   }
 
-
+  private def getMagicFileFromJar(magicFolder:String):Option[File] = {
+    val magicFilesUrl: URL = getClass.getResource("/"+ magicFolder)
+    /*val magicFilesUrl = new URL("jar:file:/Users/amit.kumar/ws/misc/mime-guess/target/universal" +
+      "/mime-guess-0.1.0-SNAPSHOT/lib/mime-guess.mime-guess-0.1.0-SNAPSHOT.jar!/magic-files")*/
+    magicFilesUrl.getProtocol match {
+      case "file" => Option(new File(magicFilesUrl.toURI()))
+      case "jar"  =>
+        val jarPath = magicFilesUrl.getPath().substring(5, magicFilesUrl.getPath().indexOf("!"))
+        val jar = new JarFile(URLDecoder.decode(jarPath, "UTF-8"))
+        val jarEntry = jar.entries().asIterator().asScala.toSeq.map(_.getName)
+          .filter(f => f.startsWith(magicFolder)  && !f.endsWith("/"))
+        val tmpDir: Path = Files.createTempDirectory(magicFolder)
+        jarEntry.foreach{ entry =>
+          val magicStream = Source.
+            fromInputStream(getClass.getClassLoader.getResourceAsStream(entry))
+          val s = magicStream.mkString.getBytes(StandardCharsets.UTF_8)
+          val tempFilePath = Paths.get(tmpDir.toFile.getPath+"/"+entry.split("/")(1))
+          Files.deleteIfExists(tempFilePath)
+          val p: Path = Files.createFile( tempFilePath);
+          Files.write(p,s)
+          magicStream.close()
+        }
+        Option(tmpDir.toFile)
+      case _ => None
+    }
+  }
 }
 
